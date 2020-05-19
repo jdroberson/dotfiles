@@ -51,3 +51,8 @@
 ;(package! builtin-package :recipe (:branch "develop"))
 
 (package! prettier-js)
+
+(package! company-go)
+(package! go-eldoc)
+(package! go-gopath)
+(package! gotest)
