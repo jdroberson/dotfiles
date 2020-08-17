@@ -24,7 +24,7 @@
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
 ;; `load-theme' function. This is the default:
-(setq doom-theme 'doom-nord)
+(setq doom-theme 'doom-sourcerer)
 
 ;; If you use `org' and don't want your org files in the default location below,
 ;; change `org-directory'. It must be set before org loads!
@@ -52,20 +52,45 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
-(use-package general
+(use-package general)
+
+(use-package company
   :config
-  (general-define-key
-   :states 'normal
-   "TAB" 'switch-to-next-buffer
-   "S-TAB" 'switch-to-prev-buffer
-   "C-TAB" 'other-window))
+  (setq company-dabbrev-downcase 0)
+  (setq company-idle-delay 0.2)
+  (setq company-tooltip-align-annotations t))
+(use-package company-box
+  :config
+  (company-box-mode 1))
+
+(use-package flycheck
+  :config
+  (global-flycheck-mode))
+
+(use-package ivy
+  :config
+  (ivy-mode 1)
+  (setq ivy-use-virtual-buffers t))
+(use-package counsel)
 
 
+(setq ivy-posframe-parameters '((alpha . 80)))
+
+;;
+;;
+;; JS / TS
+;;
+;;
+(defun setup-web-mode ())
 (defun setup-tide-mode ()
   (interactive)
   (tide-setup)
   (eldoc-mode)
   (tide-hl-identifier-mode +1)
+
+  (setq tide-always-show-documentation t)
+  (setq tide-completion-detailed t)
+  (setq tide-completion-enable-autoimport-suggestions t)
 
   ;; Web Mode config
   (setq web-mode-enable-auto-quoting nil)
@@ -83,8 +108,8 @@
 
   ;; Flycheck
   (flycheck-mode +1)
+  (setq flycheck-check-syntax-automatically '(save-mode-enabled))
   (flycheck-add-mode 'typescript-tslint 'web-mode)
-  (setq flycheck-check-syntax-automatically '(save mode-enabled))
 
   ;; Key bindings
   (general-define-key
@@ -120,51 +145,42 @@
    "D" 'tide-jump-to-implementation
    "b" 'tide-jump-back))
 
-(setq company-tooltip-align-annotations t)
-
 (use-package prettier-js
   :defer t)
 
 (use-package tide
-  :defer t)
+  :defer t
+  :after (typescript-mode web-mode company flycheck))
 
 (use-package web-mode
   :mode (("\\.tsx$" . web-mode))
   :init
   (add-hook 'web-mode-hook 'company-mode)
   (add-hook 'web-mode-hook 'prettier-js-mode)
-  (add-hook 'web-mode-hook (lambda () (pcase (file-name-extension buffer-file-name)
-                                        ("tsx" (setup-tide-mode))
-                                        (_ (lambda ()))))))
+  (add-hook 'web-mode-hook (lambda ()
+                             (when (and (not (eq buffer-file-name nil)) (string-equal "tsx" (file-name-extension buffer-file-name)))
+                               (setup-tide-mode)))))
 
+(use-package typescript-mode
+  :mode (("\\.ts$" . typescript-mode))
+  :init
+  (add-hook 'typescript-mode-hook #'setup-tide-mode)
+  (add-hook 'typescript-mode-hook 'company-mode)
+  (add-hook 'typescript-mode-hook 'prettier-js-mode))
 
-(add-hook 'typescript-mode-hook #'setup-tide-mode)
-(add-hook 'typescript-mode-hook 'company-mode)
-(add-hook 'typescript-mode-hook 'prettier-js-mode)
 (add-hook 'js2-mode-hook 'prettier-js-mode)
 
-(setq-default tide-tsserver-executable "/usr/local/bin/tsserver")
+(setq-default tide-tsserver-executable "~/go/src/github.com/couchbaselabs/project-avengers/cmd/cp-ui/node_modules/typescript/bin/tsserver")
 
-;; Old web mode hook stuff
-;; (add-to-list 'auto-mode-alist '("\\.tsx\\''" . web-mode))
-;; (add-hook 'web-mode-hook
-;;          '(lambda ()
-;;            (when (string-equal "tsx" (file-name-extension buffer-file-name))
-;;              (setup-tide-mode))))
 
+;;
+;;
 ;; Go stuff
-
-(use-package lsp-mode
-  :ensure t
-  :commands (lsp lsp-deferred)
-  :hook (go-mode . lsp-deferred))
-
-(defun lsp-go-install-save-hooks ()
-  (add-hook 'before-save-hook #'lsp-format-buffer t t)
-  (add-hook 'before-save-hook #'lsp-organize-imports t t))
+;;
+;
+;;
 
 (defun setup-go-mode ()
-  (setq 'go-packages-function 'go-packages-go-list)
   (general-define-key
    :states 'normal
    :keymaps 'local
@@ -173,22 +189,27 @@
 
    "f" 'godef-jump))
 
-(use-package go-mode
-  :config
-  (add-hook 'before-save-hook #'gofmt-before-save)
-  (add-hook 'go-mode-hook 'flycheck-mode)
-  (add-hook 'go-mode-hook 'dumb-jump-mode)
-  (add-hook 'go-mode-hook #'setup-go-mode)
-  (add-hook 'go-mode-hook #'lsp-go-install-save-hooks))
-
-(use-package company-go
-  :config
-  (add-hook 'go-mode-hook 'company-mode)
-  (add-to-list 'company-backends 'company-go))
-
-(use-package go-eldoc
-  :diminish eldoc-mode
-  :config (add-hook 'go-mode-hook 'go-eldoc-setup))
-
+(use-package go-mode)
 (use-package go-gopath)
 (use-package gotest)
+
+
+;;
+;;
+;; Editor Stuff
+;;
+;;
+
+(use-package all-the-icons)
+;; Modeline
+(setq doom-modeline-icon t)
+
+
+;;
+;;
+;; Gherkin Stuff
+;;
+;;
+
+(use-package feature-mode
+  :mode (("\\.feature$" . feature-mode)))

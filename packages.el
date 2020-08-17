@@ -50,9 +50,17 @@
 ;; our package manager can't deal with; see raxod502/straight.el#279)
 ;(package! builtin-package :recipe (:branch "develop"))
 
+;; Editor packages
+(package! all-the-icons)
+
+;; JS Packages
 (package! prettier-js)
 
+;; Go Packages
 (package! company-go)
 (package! go-eldoc)
 (package! go-gopath)
 (package! gotest)
+
+;; Gherkin Feature Files
+(package! feature-mode)
