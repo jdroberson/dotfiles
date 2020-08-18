@@ -19,7 +19,7 @@
 ;;
 ;; They all accept either a font-spec, font string ("Input Mono-12"), or xlfd
 ;; font string. You generally only need these two:
-(setq doom-font (font-spec :family "Fira Code" :size 12))
+(setq doom-font (font-spec :family "Iosevka Light" :size 13))
 
 ;; There are two ways to load a theme. Both assume the theme is installed and
 ;; available. You can either set `doom-theme' or manually load a theme with the
@@ -76,14 +76,33 @@
 
 (setq ivy-posframe-parameters '((alpha . 80)))
 
+
+;;
+;;
+;; LSP Mode
+;;
+;;
+
+(use-package lsp-mode
+  :commands lsp lsp-deferred
+  :config (setq read-process-output-max (* 1024 1024)))
+
+(use-package lsp-ui
+  :commands lsp-ui-mode
+  :config (setq lsp-ui-doc-header t
+                lsp-ui-doc-position 'at-point
+                lsp-ui-doc-delay 1
+                lsp-ui-doc-use-childframe 't))
+
+(use-package company-lsp :commands comapny-lsp)
+
 ;;
 ;;
 ;; JS / TS
 ;;
 ;;
-(defun setup-web-mode ())
-(defun setup-tide-mode ()
-  (interactive)
+(defun my-setup-web-mode ())
+(defun my-setup-tide-mode ()
   (tide-setup)
   (eldoc-mode)
   (tide-hl-identifier-mode +1)
@@ -101,15 +120,16 @@
   (setq web-mode-enable-auto-closing t)
   (setq web-mode-enable-css-colorization t)
 
+  (setq lsp-eslint-server-command '("node" (concat (getenv "HOME") ".vscode/extensions/dbaeumer.vscode-eslint-2.1.8/server/out/eslintServer.js") "--stdio"))
+
   ;; Company stuff
   (set (make-local-variable 'company-backends)
        '((company-tide company-files :with company-yasnippet)
          (company-dabbrev-code company-dabbrev)))
 
   ;; Flycheck
-  (flycheck-mode +1)
-  (setq flycheck-check-syntax-automatically '(save-mode-enabled))
-  (flycheck-add-mode 'typescript-tslint 'web-mode)
+  ;; (setq flycheck-check-syntax-automatically '(save-mode-enabled))
+  ;; (flycheck-add-mode 'typescript-tslint 'web-mode)
 
   ;; Key bindings
   (general-define-key
@@ -149,22 +169,25 @@
   :defer t)
 
 (use-package tide
-  :defer t
+  :ensure t
   :after (typescript-mode web-mode company flycheck))
 
 (use-package web-mode
   :mode (("\\.tsx$" . web-mode))
   :init
-  (add-hook 'web-mode-hook 'company-mode)
+  (add-hook 'web-mode-hook (lambda () (pcase (file-name-extension buffer-file-name)
+                                        ("tsx" (my-setup-tide-mode))
+                                        (_ (my-setup-web-mode))))))
   (add-hook 'web-mode-hook 'prettier-js-mode)
-  (add-hook 'web-mode-hook (lambda ()
-                             (when (and (not (eq buffer-file-name nil)) (string-equal "tsx" (file-name-extension buffer-file-name)))
-                               (setup-tide-mode)))))
+  (add-hook 'web-mode-hook 'company-mode)
+  ;; (add-hook 'web-mode-hook (lambda ()
+                             ;; (when (and (not (eq buffer-file-name nil)) (string-equal "tsx" (file-name-extension buffer-file-name)))
+                               ;; (my-setup-tide-mode)))))
 
 (use-package typescript-mode
   :mode (("\\.ts$" . typescript-mode))
   :init
-  (add-hook 'typescript-mode-hook #'setup-tide-mode)
+  (add-hook 'typescript-mode-hook 'my-setup-tide-mode)
   (add-hook 'typescript-mode-hook 'company-mode)
   (add-hook 'typescript-mode-hook 'prettier-js-mode))
 
