@@ -55,10 +55,14 @@
 (use-package general)
 
 (use-package company
+  :custom
+  (company-dabbrev-downcase nil)
+  (company-dabbrev-ignore-case nil)
+  (company-idle-delay 0.2)
+  (company-tooltip-align-annotations t)
   :config
-  (setq company-dabbrev-downcase 0)
-  (setq company-idle-delay 0.2)
-  (setq company-tooltip-align-annotations t))
+  (global-company-mode))
+
 (use-package company-box
   :config
   (company-box-mode 1))
@@ -67,14 +71,21 @@
   :config
   (global-flycheck-mode))
 
+(defun disable-checkdoc ()
+  (setq-local flycheck-disabled-checkers '(emacs-lisp-checkdoc)))
+(add-hook 'org-src-mode-hook 'disable-checkdoc)
+
 (use-package ivy
   :config
   (ivy-mode 1)
-  (setq ivy-use-virtual-buffers t))
-(use-package counsel)
+  :custom
+  (ivy-use-virtual-buffers t)
+  (ivy-display-style 'fancy)
+  (ivy-posframe-parameters '((alpha . 80))))
 
-
-(setq ivy-posframe-parameters '((alpha . 80)))
+(use-package counsel
+  :config
+  (counsel-mode 1))
 
 
 ;;
@@ -94,17 +105,19 @@
                 lsp-ui-doc-delay 1
                 lsp-ui-doc-use-childframe 't))
 
-(use-package company-lsp :commands comapny-lsp)
+(use-package company-lsp :commands company-lsp)
 
 ;;
 ;;
 ;; JS / TS
 ;;
 ;;
+
 (defun my-setup-web-mode ())
 (defun my-setup-tide-mode ()
+  (interactive)
   (tide-setup)
-  (eldoc-mode)
+  (eldoc-mode +1)
   (tide-hl-identifier-mode +1)
 
   (setq tide-always-show-documentation t)
@@ -123,13 +136,17 @@
   (setq lsp-eslint-server-command '("node" (concat (getenv "HOME") ".vscode/extensions/dbaeumer.vscode-eslint-2.1.8/server/out/eslintServer.js") "--stdio"))
 
   ;; Company stuff
+  (setq company-transformers '(company-sort-by-backend-importance))
   (set (make-local-variable 'company-backends)
-       '((company-tide company-files :with company-yasnippet)
+       '((company-tide company-files :with company-yasnippet :with company-dabbrev-code)
          (company-dabbrev-code company-dabbrev)))
 
   ;; Flycheck
-  ;; (setq flycheck-check-syntax-automatically '(save-mode-enabled))
-  ;; (flycheck-add-mode 'typescript-tslint 'web-mode)
+  (setq flycheck-check-syntax-automatically '(mode-enabled save))
+  (flycheck-add-next-checker 'javascript-eslint 'typescript-tide 'append)
+
+  ;; Eslint
+  (add-hook 'after-save-hook #'eslint-fix nil t)
 
   ;; Key bindings
   (general-define-key
@@ -142,6 +159,7 @@
    "R" 'tide-restart-server
    "d" 'tide-documentation-at-point
    "F" 'tide-format
+   "C-f" 'eslint-fix
 
    ;; prefix `e` - Errors
    "e s" 'tide-error-at-point
@@ -169,31 +187,28 @@
   :defer t)
 
 (use-package tide
-  :ensure t
-  :after (typescript-mode web-mode company flycheck))
+  :defer t)
 
 (use-package web-mode
   :mode (("\\.tsx$" . web-mode))
   :init
-  (add-hook 'web-mode-hook (lambda () (pcase (file-name-extension buffer-file-name)
-                                        ("tsx" (my-setup-tide-mode))
-                                        (_ (my-setup-web-mode))))))
   (add-hook 'web-mode-hook 'prettier-js-mode)
-  (add-hook 'web-mode-hook 'company-mode)
-  ;; (add-hook 'web-mode-hook (lambda ()
-                             ;; (when (and (not (eq buffer-file-name nil)) (string-equal "tsx" (file-name-extension buffer-file-name)))
-                               ;; (my-setup-tide-mode)))))
+  (add-hook 'web-mode-hook (lambda () (pcase (file-name-extension buffer-file-name)
+                                        (_ (my-setup-tide-mode))
+                                        ;; (_ (my-setup-web-mode))
+                                        )))
+  (add-hook 'web-mode-hook #'lsp-deferred))
 
 (use-package typescript-mode
   :mode (("\\.ts$" . typescript-mode))
   :init
   (add-hook 'typescript-mode-hook 'my-setup-tide-mode)
-  (add-hook 'typescript-mode-hook 'company-mode)
-  (add-hook 'typescript-mode-hook 'prettier-js-mode))
+  (add-hook 'typescript-mode-hook 'prettier-js-mode)
+  :custom
+  (tide-tsserver-executable "~/go/src/github.com/couchbaselabs/project-avengers/cmd/cp-ui/node_modules/typescript/bin/tsserver"))
 
 (add-hook 'js2-mode-hook 'prettier-js-mode)
 
-(setq-default tide-tsserver-executable "~/go/src/github.com/couchbaselabs/project-avengers/cmd/cp-ui/node_modules/typescript/bin/tsserver")
 
 
 ;;

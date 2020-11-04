@@ -55,6 +55,7 @@
 
 ;; JS Packages
 (package! prettier-js)
+(package! eslint-fix)
 
 ;; Go Packages
 (package! company-go)
