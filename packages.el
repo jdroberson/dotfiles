@@ -54,7 +54,7 @@
 (package! all-the-icons)
 
 ;; JS Packages
-(package! prettier-js)
+(package! prettier)
 (package! eslint-fix)
 
 ;; Go Packages
@@ -65,3 +65,16 @@
 
 ;; Gherkin Feature Files
 (package! feature-mode)
+
+;; Tree-Sitter
+(package! tree-sitter
+  :recipe
+  (:host github
+   :repo "ubolonton/emacs-tree-sitter"
+   :files ("lisp/*.el")))
+
+(package! tree-sitter-langs
+  :recipe
+  (:host github
+   :repo "ubolonton/emacs-tree-sitter"
+   :files ("langs/*.el" "langs/queries")))

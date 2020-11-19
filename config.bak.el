@@ -52,21 +52,6 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
-
-;; Editor environment variable init
-(custom-set-variables
- ;; Don't create lockfiles everywhere -- causes problems with webpack dev server and others
- '(create-lockfiles nil)
- ;; workaround for posframe issue that impacts lsp-ui *AND* company
- '(focus-follows-mouse 'auto-raise)
- '(mouse-autoselect-window nil))
- ;; we hate OSX window manager!
-
-(setq ns-use-native-fullscreen nil)
-(setq ns-pop-up-frames nil)
-(set-frame-parameter nil 'menu-bar-lines 1)
-
-;; Packages / Modes config
 (use-package general)
 
 (use-package company
@@ -76,14 +61,7 @@
   (company-idle-delay 0.2)
   (company-tooltip-align-annotations t)
   :config
-  (global-company-mode)
-  :general
-  (:keymaps
-   'company-active-map
-   "C-n" 'company-select-next
-   "C-N" 'company-select-previous
-   "C-p" 'company-select-previous
-   "C-f" 'company-filter-candidates))
+  (global-company-mode))
 
 (use-package company-box
   :config
@@ -93,21 +71,15 @@
   :config
   (global-flycheck-mode))
 
-(defun disable-checkdoc ()
-  (setq-local flycheck-disabled-checkers '(emacs-lisp-checkdoc)))
-(add-hook 'org-src-mode-hook 'disable-checkdoc)
-
 (use-package ivy
   :config
   (ivy-mode 1)
-  :custom
-  (ivy-use-virtual-buffers t)
-  (ivy-display-style 'fancy)
-  (ivy-posframe-parameters '((alpha . 80))))
+  (setq ivy-use-virtual-buffers t))
+(use-package counsel)
 
-(use-package counsel
-  :config
-  (counsel-mode 1))
+
+(setq ivy-posframe-parameters '((alpha . 80)))
+
 
 ;;
 ;;
@@ -117,72 +89,110 @@
 
 (use-package lsp-mode
   :commands lsp lsp-deferred
-  :custom
-  (read-process-output-max (* 1024 1024))
-  :general
-  (:states 'normal
-   "C-, x" 'lsp-execute-code-action
-   "M-RET" 'lsp-execute-code-action))
+  :config (setq read-process-output-max (* 1024 1024)))
 
 (use-package lsp-ui
   :commands lsp-ui-mode
-  :custom
-  (lsp-ui-doc-header t)
-  (lsp-ui-doc-position 'at-point)
-  (lsp-ui-doc-delay 1)
-  (lsp-ui-doc-use-childframe t)
-  :general
-  (:states 'normal
-   :prefix "C-,"
-   "h" 'lsp-ui-doc-hide
-   "d" 'lsp-describe-thing-at-point
-   "u" 'lsp-ui-doc-unfocus-frame
-   "f" 'lsp-ui-doc-focus-frame
-   "l" 'flycheck-list-errors
-   "n" 'flycheck-next-error
-   "p" 'flycheck-previous-error))
+  :config (setq lsp-ui-doc-header t
+                lsp-ui-doc-position 'at-point
+                lsp-ui-doc-delay 1
+                lsp-ui-doc-use-childframe 't))
+
+(use-package company-lsp :commands comapny-lsp)
 
 ;;
 ;;
 ;; JS / TS
 ;;
 ;;
-
-(defun ts-setup ()
+(defun my-setup-web-mode ())
+(defun my-setup-tide-mode ()
+  (tide-setup)
   (eldoc-mode +1)
-  (setq lsp-eslint-server-command '("node" (concat (getenv "HOME") "dev/plugins/vscode-eslint/server/out/eslintServer.js") "--stdio"))
+  (tide-hl-identifier-mode +1)
 
-  (setq flycheck-check-syntax-automatically '(mode-enabled save))
+  (setq tide-always-show-documentation t)
+  (setq tide-completion-detailed t)
+  (setq tide-completion-enable-autoimport-suggestions t)
 
-  (add-hook 'after-save-hook #'eslint-fix nil t))
+  ;; Web Mode config
+  (setq web-mode-enable-auto-quoting nil)
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-code-indent-offset 2)
+  (setq web-mode-attr-indent-offset 2)
+  (setq web-mode-attr-value-indent-offset 2)
+  (setq web-mode-enable-auto-closing t)
+  (setq web-mode-enable-css-colorization t)
 
-(use-package prettier
-  :hook
-  (typescript-mode . prettier-mode))
+  (setq lsp-eslint-server-command '("node" (concat (getenv "HOME") ".vscode/extensions/dbaeumer.vscode-eslint-2.1.8/server/out/eslintServer.js") "--stdio"))
 
+  ;; Company stuff
+  (set (make-local-variable 'company-backends)
+       '((company-tide company-files :with company-yasnippet)
+         (company-dabbrev-code company-dabbrev)))
+
+  ;; Flycheck
+  (setq flycheck-check-syntax-automatically '(save-mode-enabled))
+  (flycheck-add-mode 'typescript-tslint 'web-mode)
+
+  ;; Key bindings
+  (general-define-key
+   :states 'normal
+   :keymaps 'local
+   :prefix "C-,"
+   "f" 'tide-fix
+   "i" 'tide-organize-imports
+   "u" 'tide-references
+   "R" 'tide-restart-server
+   "d" 'tide-documentation-at-point
+   "F" 'tide-format
+
+   ;; prefix `e` - Errors
+   "e s" 'tide-error-at-point
+   "e l" 'tide-project-errors
+   "e i" 'tide-add-tslint-disable-next-line
+   "e n" 'flycheck-next-error
+   "e p" 'flycheck-previous-error
+
+   ;; prefix `r` - Rename
+   "r r" 'tide-rename-symbol
+   "r f" 'tide-refactor
+   "r F" 'tide-rename-file)
+
+  (general-define-key
+   :states 'normal
+   :keymaps 'local
+   :prefix "g"
+   :override t
+
+   "d" 'tide-jump-to-definition
+   "D" 'tide-jump-to-implementation
+   "b" 'tide-jump-back))
+
+(use-package prettier-js
+  :defer t)
+
+(use-package tide
+  :defer t)
+
+(use-package web-mode
+  :mode (("\\.tsx$" . web-mode))
+  :init
+  (add-hook 'web-mode-hook 'prettier-js-mode)
+  (add-hook 'web-mode-hook (lambda () (pcase (file-name-extension buffer-file-name)
+                                        ("tsx" (my-setup-tide-mode))
+                                        (_ (my-setup-web-mode))))))
 
 (use-package typescript-mode
-  :mode "\\.tsx?$"
-  :hook (typescript-mode . lsp)
-  :config
-  (ts-setup)
-  :custom
-  (typescript-indent-level 2))
+  :mode (("\\.ts$" . typescript-mode))
+  :init
+  (add-hook 'typescript-mode-hook 'prettier-js-mode)
+  (add-hook 'typescript-mode-hook 'my-setup-tide-mode))
 
+(add-hook 'js2-mode-hook 'prettier-js-mode)
 
-;;
-;;
-;; Tree-Sitter
-;;
-;;
+(setq-default tide-tsserver-executable "~/go/src/github.com/couchbaselabs/project-avengers/cmd/cp-ui/node_modules/typescript/bin/tsserver")
 
-(use-package tree-sitter
-  :hook
-  (typescript-mode . tree-sitter-mode)
-  (typescript-mode . tree-sitter-hl-mode))
-
-(use-package tree-sitter-langs
-  :after tree-sitter)
 
 ;;
 ;;
@@ -213,10 +223,8 @@
 
 (use-package all-the-icons)
 ;; Modeline
-(custom-set-variables
- '(doom-modeline-icon (display-graphic-p))
- '(doom-modeline-major-mode-icon t)
- '(doom-modeline-buffer-encoding nil))
+(setq doom-modeline-icon t)
+
 
 ;;
 ;;
