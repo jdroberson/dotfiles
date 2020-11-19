@@ -142,6 +142,9 @@
    "n" 'flycheck-next-error
    "p" 'flycheck-previous-error))
 
+(use-package lsp-ivy
+  :commands lsp-ivy-workspace-symbol)
+
 ;;
 ;;
 ;; JS / TS
