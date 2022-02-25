@@ -52,6 +52,7 @@
 ;; You can also try 'gd' (or 'C-c g d') to jump to their definition and see how
 ;; they are implemented.
 
+(setq default-directory "~/")
 
 ;; Editor environment variable init
 (custom-set-variables
@@ -109,6 +110,13 @@
   :config
   (counsel-mode 1))
 
+(use-package projectile
+  :commands projectile-find-file projectile-switch-project projectile-switch-buffer
+  :config
+  (projectile-mode +1)
+  :custom
+  (project-completion-system 'ivy))
+
 ;;
 ;;
 ;; LSP Mode
@@ -122,6 +130,7 @@
   :general
   (:states 'normal
    "C-, x" 'lsp-execute-code-action
+   "g d" 'lsp-find-definition
    "M-RET" 'lsp-execute-code-action))
 
 (use-package lsp-ui
@@ -136,8 +145,9 @@
    :prefix "C-,"
    "h" 'lsp-ui-doc-hide
    "d" 'lsp-describe-thing-at-point
-   "u" 'lsp-ui-doc-unfocus-frame
-   "f" 'lsp-ui-doc-focus-frame
+   "U" 'lsp-ui-doc-unfocus-frame
+   "F" 'lsp-ui-doc-focus-frame
+   "u" 'lsp-find-references
    "l" 'flycheck-list-errors
    "n" 'flycheck-next-error
    "p" 'flycheck-previous-error))
@@ -153,11 +163,21 @@
 
 (defun ts-setup ()
   (eldoc-mode +1)
-  (setq lsp-eslint-server-command '("node" (concat (getenv "HOME") "dev/plugins/vscode-eslint/server/out/eslintServer.js") "--stdio"))
 
   (setq flycheck-check-syntax-automatically '(mode-enabled save))
+  (setq flycheck-javascript-eslint-executable "eslint_d")
+  (setq flycheck-checker 'javascript-eslint)
 
-  (add-hook 'after-save-hook #'eslint-fix nil t))
+  ;; (setq lsp-eslint-server-command '("node" "/Users/jesseroberson/dev/plugins/vscode-eslint/server/out/eslintServer.js" "--stdio"))
+  ;; (setq lsp-eslint-validate ["javascript" "javascriptreact" "typescript" "typescriptreact"])
+
+  ;; (add-hook 'after-save-hook #'eslint-fix nil t)
+  (general-define-key
+   :states 'normal
+   :keymaps 'local
+   :override t
+
+   "s-F" #'eslint-fix nil t))
 
 (use-package prettier
   :hook
@@ -167,6 +187,7 @@
 (use-package typescript-mode
   :mode "\\.tsx?$"
   :hook (typescript-mode . lsp)
+  :hook (typescript-mode . eslintd-fix-mode)
   :config
   (ts-setup)
   :custom
@@ -179,14 +200,18 @@
 ;;
 ;;
 
-(use-package tree-sitter
-  :hook
-  (typescript-mode . tree-sitter-mode)
-  (typescript-mode . tree-sitter-hl-mode))
+;; (use-package tree-sitter
+;;   :hook
+;;   (typescript-mode . tree-sitter-mode)
+;;   (typescript-mode . tree-sitter-hl-mode))
 
-(use-package tree-sitter-langs
-  :after tree-sitter)
-
+;; (use-package tree-sitter-langs
+;;   :after tree-sitter)
+(use-package! tree-sitter
+  :config
+  (require 'tree-sitter-langs)
+  (global-tree-sitter-mode)
+  (add-hook 'tree-sitter-after-on-hook #'tree-sitter-hl-mode))
 ;;
 ;;
 ;; Go stuff
@@ -219,6 +244,9 @@
 (custom-set-variables
  '(doom-modeline-icon (display-graphic-p))
  '(doom-modeline-major-mode-icon t)
+ '(doom-modeline-buffer-encoding nil)
+ '(doom-modeline-workspace-name nil)
+ '(doom-modeline-buffer-file-name-style 'file-name)
  '(doom-modeline-buffer-encoding nil))
 
 ;;
